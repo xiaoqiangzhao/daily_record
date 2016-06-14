@@ -1,4 +1,3 @@
-#! /home/b51816/local/bin/python3
 '''this comment exists just to get rid of annoying warning'''
 import sqlite3
 
@@ -52,18 +51,51 @@ class sqlite3_operations(object):
     def get_columns(self,table_name):
         '''return all columns of table'''
         columns_l = list(map(lambda x: x[0], self.mx_cursor.execute('select * from {table_name}'.format(table_name = table_name )).description))
-        print(columns_l)
         return columns_l
+
+    def valid_columns(self, table_name, *columns):
+        '''check if columns are valid or not in table '''
+        table_columns = set(self.get_columns(table_name))
+        columns = set(columns)
+        diff_columns = columns - table_columns
+        if diff_columns:
+            raise ValueError(*diff_columns," do not exist in table ",table_name)
+        return True
+
 
     def insert_item(self, table_name, **kwargs):
         '''insert items into the table
         kwargs used to indicate item names and values'''
-        table_columns = set(self.get_columns(table_name))
         target_columns = kwargs.keys()
-        diff_columns = target_columns - table_columns
-        if diff_columns:
-            raise ValueError(*diff_columns," do not exist in table ",table_name)
         target_values = kwargs.values()
+
+        self.valid_columns(table_name, *target_columns)
+
+        str_columns = ', '.join(map(lambda x: str(x), target_columns))
+        str_values = ', '.join(map(lambda x: "'"+str(x)+"'", target_values))
+        str_locator = ','.join(map(lambda x: '?', target_columns))
+        str_table_name = "'"+table_name+"'"
+        str_execute = "insert into {table_name} ({columns}) values ({values})".format(table_name = table_name , columns = str_columns, values = str_values)
+        self.mx_cursor.execute(str_execute)
+
+    def update_item(self, table_name, dict_set, dict_where):
+        '''update item
+        dict_set should be a dcitionary identifying target columns
+        dict_where should be a dictionary identifying select condition'''
+        if not isinstance(dict_set,dict) or not isinstance(dict_where,dict):
+            raise ValueError("dict_set and dict_where should both be dictionary")
+        if self.valid_columns(table_name,  *dict_set.keys()) and self.valid_columns(table_name, *dict_where.keys()):
+            print(type(dict_set))
+            print(type(dict_where))
+            str_set = ', '.join(map(lambda k: k+" = '"+str(dict_set[k])+"'",dict_set))
+            str_where = ' and '.join(map(lambda k: k+" = '"+str(dict_where[k])+"'",dict_where))
+            str_execute = 'update {table_name} set {str_set} where {str_where}'.format(table_name = table_name, str_set = str_set, str_where = str_where)
+            self.mx_cursor.execute(str_execute)
+
+    def get_all_items_by_table(self,table_name):
+        '''get all items of table identified'''
+        self.mx_cursor.execute('select * from {table_name}'.format(table_name = table_name))
+        return self.mx_cursor.fetchall()
 
     def close_connection(self):
         '''close the database connection'''
@@ -77,12 +109,20 @@ if __name__ == '__main__':
     my_opts.create_table('classes','id integer primary key autoincrement',*items)
     l = my_opts.get_columns("classes")
     my_tables = my_opts.get_tables()
-    insert_items = {'class':'haha', 'parent':'gaga', 'dodo':'no','peipei':'yes'}
+    insert_items = {'class':'haha', 'parent':'gaga'}
     for table in my_tables:
         print(table)
     my_opts.insert_item('classes', **insert_items)
-    my_opts.delete_table("classes")
-    my_tables = my_opts.get_tables()
-    for table in my_tables:
-        print(table)
+    print("get all item")
+    all_items = my_opts.get_all_items_by_table('classes')
+    my_opts.update_item('classes',{'class':'update'},{'parent':'gaga'})
+    print("get all item")
+    all_items = my_opts.get_all_items_by_table('classes')
+    for item in all_items:
+        print(item)
+
+    # my_opts.delete_table("classes")
+    # my_tables = my_opts.get_tables()
+    # for table in my_tables:
+        # print(table)
     my_opts.close_connection()
