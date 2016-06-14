@@ -6,17 +6,23 @@ class sqlite3_operations(object):
 
     def __init__(self, **kwargs):
         '''initialize the database connection'''
-        if kwargs['db']:
+        if 'db' in kwargs:
             self.db = kwargs['db']
             self.mx_conn = sqlite3.connect(self.db)
             self.mx_cursor = self.mx_conn.cursor()
         else:
             raise ValueError("need arg db")
+    def connect_db(self,**kwargs):
+        '''connect db, initialize self.mx_conn and self.mx_cursor'''
+        if 'db' in kwargs:
+            self.db = kwargs['db']
+        self.mx_conn = sqlite3.connect(self.db)
+        self.mx_cursor = self.mx_conn.cursor()
 
     def get_tables(self):
         '''get all table names in current database'''
         self.mx_cursor.execute('select name from sqlite_master where type="table"')
-        return self.mx_cursor.fetchall()
+        return list(map(lambda x : x[0] , self.mx_cursor.fetchall()))
 
     def IsTableExist(self, table_name):
         '''check if the table_name exists in current database'''
@@ -46,7 +52,10 @@ class sqlite3_operations(object):
            print("table %s already exist, delete and re-generate" % table_name)
            self.mx_cursor.execute('drop table %s'% table_name)
         items_str = ", ".join(args)
-        self.mx_cursor.execute('create table {table_name} ({primary_key}, {items_str})'.format(table_name = table_name, primary_key = primary_key, items_str = items_str))
+        str_execute = 'create table {table_name} ({primary_key}, {items_str})'.format(table_name = str(table_name), primary_key = primary_key, items_str = items_str)
+        print(str_execute)
+        self.mx_cursor.execute(str_execute)
+
 
     def get_columns(self,table_name):
         '''return all columns of table'''

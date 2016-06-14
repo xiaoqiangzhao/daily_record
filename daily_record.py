@@ -2,27 +2,40 @@
 import os, sys
 import itertools
 from time import localtime, strftime
-import sqlite3
-import sqlite3_opts
+from sqlite3_operations import sqlite3_operations
 class record(object):
 
     def __init__(self,**kwargs):
+        '''PROJECTDIR is the directory where works are put
+        DB should be put in PROJECTDIR/DB'''
         self.PROJECTDIR = os.path.dirname(os.path.realpath(__file__))
+        self.DBDIR = os.path.join(self.PROJECTDIR, 'DB')
         self.DB = "daily_record.db"
-        if kwargs['db']:
+        if "db" in kwargs:
             self.DB = kwargs['db']
-        self.sql_opts = sqlite3_operations(self.DB)
+        self.sql = sqlite3_operations(db = os.path.join(self.DBDIR,self.DB))
+        self.primary_key = 'id integer primary key autoincrement'
+        self.record_heads = ['begin tinytext', 'end tinytext', 'works tinytext', 'description tinytext', 'comments tinytext', 'severity integer']
+
+    def add_page(self,**kwargs):
+        '''use current date as default table name or can be identified by arg page_name = 'xxx' '''
+        page_name = 'day'+strftime("%Y%m%d")
+        if 'page_name' in kwargs:
+            page_name = kwargs['page_name']
+        print(page_name)
+        if page_name in self.sql.get_tables():
+            raise ValueError(page_name," already exists, please delele first with self.delete_page")
+        self.sql.create_table(page_name, self.primary_key, *self.record_heads)
 
 
 
 if __name__ == '__main__':
-    my_record = record(db='jay_record.db')
-    print("PROJECTDIR",my_record.PROJECTDIR,sep="==>")
-    print("DB",my_record.DB,sep="==>")
-    tables = my_record.get_all_tables(my_record.DB)
-    if not tables:
-        print("no tables found")
-    else:
-        for table in tables:
-            print("=>  ",table)
-
+    m_r = record()
+    # m_r.add_page()
+    for table in m_r.sql.get_tables():
+        print(table)
+        print(m_r.sql.get_columns(table))
+        for item in m_r.sql.get_all_items_by_table(table):
+            print(item)
+    m_r.sql.close_connection()
+    pass
