@@ -5,11 +5,9 @@ class sqlite3_operations(object):
     '''some common SQL operations based on sqlite3'''
 
     def __init__(self, **kwargs):
-        '''initialize the database connection'''
+        '''initialize  database'''
         if 'db' in kwargs:
             self.db = kwargs['db']
-            self.mx_conn = sqlite3.connect(self.db)
-            self.mx_cursor = self.mx_conn.cursor()
         else:
             raise ValueError("need arg db")
     def connect_db(self,**kwargs):
@@ -18,6 +16,26 @@ class sqlite3_operations(object):
             self.db = kwargs['db']
         self.mx_conn = sqlite3.connect(self.db)
         self.mx_cursor = self.mx_conn.cursor()
+
+    def close_connection(self):
+        '''close the database connection'''
+        self.mx_cursor.close()
+        self.mx_conn.commit()
+        self.mx_conn.close()
+
+    def __enter__(self):
+        '''context manager enter connect the db'''
+        print("trying to connect {}".format(self.db))
+        self.connect_db(db = self.db)
+        return self
+
+    def __exit__(self, exc_ty, exc_val, tb):
+        '''context manager exit close the connection'''
+        print("close the connection")
+        self.close_connection()
+        self.mx_cursor = None
+        self.mx_conn = None
+
 
     def get_tables(self):
         '''get all table names in current database'''
@@ -106,32 +124,27 @@ class sqlite3_operations(object):
         self.mx_cursor.execute('select * from {table_name}'.format(table_name = table_name))
         return self.mx_cursor.fetchall()
 
-    def close_connection(self):
-        '''close the database connection'''
-        self.mx_cursor.close()
-        self.mx_conn.commit()
-        self.mx_conn.close()
 
 if __name__ == '__main__':
-    my_opts = sqlite3_operations(db='test.db')
+    opts = sqlite3_operations(db='test.db')
     items = ['class tinytext', 'parent tinytext', 'function text', 'task text']
-    my_opts.create_table('classes','id integer primary key autoincrement',*items)
-    l = my_opts.get_columns("classes")
-    my_tables = my_opts.get_tables()
-    insert_items = {'class':'haha', 'parent':'gaga'}
-    for table in my_tables:
-        print(table)
-    my_opts.insert_item('classes', **insert_items)
-    print("get all item")
-    all_items = my_opts.get_all_items_by_table('classes')
-    my_opts.update_item('classes',{'class':'update'},{'parent':'gaga'})
-    print("get all item")
-    all_items = my_opts.get_all_items_by_table('classes')
-    for item in all_items:
-        print(item)
+    with opts as my_opts:
+        my_opts.create_table('classes','id integer primary key autoincrement',*items)
+        l = my_opts.get_columns("classes")
+        my_tables = my_opts.get_tables()
+        insert_items = {'class':'haha', 'parent':'gaga'}
+        for table in my_tables:
+            print(table)
+        my_opts.insert_item('classes', **insert_items)
+        print("get all item")
+        all_items = my_opts.get_all_items_by_table('classes')
+        my_opts.update_item('classes',{'class':'update'},{'parent':'gaga'})
+        print("get all item")
+        all_items = my_opts.get_all_items_by_table('classes')
+        for item in all_items:
+            print(item)
 
     # my_opts.delete_table("classes")
     # my_tables = my_opts.get_tables()
     # for table in my_tables:
         # print(table)
-    my_opts.close_connection()

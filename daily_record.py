@@ -1,4 +1,3 @@
-#! /home/b51816/local/bin/python3
 import os, sys
 import itertools
 from time import localtime, strftime
@@ -18,8 +17,8 @@ class record(object):
         self.record_heads = ['begin tinytext', 'end tinytext', 'works tinytext', 'description tinytext', 'comments tinytext', 'severity integer']
 
     def add_page(self,**kwargs):
-        '''use current date as default table name or can be identified by arg page_name = 'xxx' '''
-        page_name = 'day'+strftime("%Y%m%d")
+        '''use current date as default table name or can be identified by arg page_name = 'xxx', please keep page name style as daily_+strftime("%Y%m%d") '''
+        page_name = 'daily_'+strftime("%Y%m%d")
         if 'page_name' in kwargs:
             page_name = kwargs['page_name']
         print(page_name)
@@ -31,7 +30,8 @@ class record(object):
 
 if __name__ == '__main__':
     m_r = record()
-    # m_r.add_page()
+    # m_r.add_page(page_name = "day20160614")
+    m_r.add_page()
     for table in m_r.sql.get_tables():
         print(table)
         print(m_r.sql.get_columns(table))
